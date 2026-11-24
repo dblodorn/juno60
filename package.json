@@ -1,0 +1,19 @@
+{
+  "name": "juno60",
+  "private": true,
+  "type": "module",
+  "description": "A browser editor and librarian for the Roland Juno-60's patches, and its emulator engine as a package.",
+  "scripts": {
+    "dev": "pnpm -F juno60-editor dev",
+    "build": "pnpm -F juno60-editor build",
+    "start": "pnpm -F juno60-editor start",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "relay": "pnpm -F juno60-editor relay",
+    "schema:pull": "pnpm -F juno60-editor schema:pull"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "packageManager": "pnpm@12.16.1"
+}

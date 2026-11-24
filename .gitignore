@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+.vercel
+.env*
+*.log
+.DS_Store
+# TypeScript
+next-env.d.ts
+*.tsbuildinfo
+# generated Relay artifacts (pnpm relay): operations and the
+# persisted-operation allowlist app/api/graphql reads
+__generated__/
+apps/editor/lib/server/persisted-operations.json
+# the engine package's build output (pnpm -F @dblodorn/roland-juno60-engine build)
+packages/*/dist/
+packages/*/src/worklet/code.generated.ts

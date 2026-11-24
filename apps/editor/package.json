@@ -1,0 +1,35 @@
+{
+  "name": "juno60-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Juno-60 editor app.",
+  "scripts": {
+    "dev": "pnpm engine && next dev",
+    "build": "pnpm engine && next build",
+    "start": "next start",
+    "test": "node --test 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "engine": "pnpm -F @dblodorn/roland-juno60-engine build:worklet"
+  },
+  "dependencies": {
+    "@dblodorn/roland-juno60-engine": "workspace:*",
+    "@dblodorn/sound-tokens": "0.1.0",
+    "@dblodorn/sound-ui": "0.3.1",
+    "next": "^15.5.7",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.32",
+    "tailwindcss": "4.3.3",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

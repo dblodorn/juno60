@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "@dblodorn/sound-ui/styles.css"; /* the tokens (1-bit theme, no radius, no shadows, `touch:`) and the components */
+@import "@dblodorn/sound-tokens/fonts.css"; /* Knif Mono, licensed under A is for fonts' webfont EULA */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+  /* page padding lives on html: Radix's scroll lock rewrites body padding while a select is open */
+  html {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: max(20px, env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-bottom, 0px));
+    color-scheme: light;
+  }
+  body {
+    font-size: var(--sound-text-body);
+    line-height: var(--sound-leading-body);
+  }
+  :focus-visible {
+    outline: var(--sound-focus-width) dashed var(--sound-ring);
+    outline-offset: var(--sound-focus-offset);
+  }
+}

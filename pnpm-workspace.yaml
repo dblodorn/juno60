@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+allowBuilds:
+  esbuild: true
+
+# pnpm holds back packages published less than a day ago; the design system's own packages are exempt
+minimumReleaseAgeExclude:
+  - '@dblodorn/sound-tokens@0.1.0'
+  - '@dblodorn/sound-ui@0.3.1'

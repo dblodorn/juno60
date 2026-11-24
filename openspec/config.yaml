@@ -1,0 +1,14 @@
+schema: spec-driven
+
+context: |
+  Browser editor/librarian for the Roland Juno-60's patches, and its emulator as a package. The Juno-60 has no MIDI
+  (DCB port, cassette tape for patches), so the editor plays the emulator; cassette dumps and MIDI retrofits are issues.
+  pnpm workspace: apps/editor (the Next.js app, started from the sound design system's starter), packages/roland-juno60-engine
+  (@dblodorn/roland-juno60-engine, playback only, published to GitHub Packages; engine packages follow
+  openspec/specs/engine-packages, copied from the vz10m and dx7 repos).
+  Stack: Next.js 15 App Router, React 19, TypeScript (strict, erasable syntax only), Tailwind v4, @dblodorn/sound-ui and
+  @dblodorn/sound-tokens, zod, node:test. Sibling repos: ~/Desktop/sound/dx7 (the pattern this repo copies), vz10m, windchime.
+  A patch is 42 bytes in this project's own layout (packages/roland-juno60-engine/src/params.ts): the Juno-60 stores
+  patches but publishes no format. Engine numbers live in src/engine/calibration.ts, each labelled MEASURED (Andy Harman's
+  Juno-60 analysis, MIT), PANEL or ESTIMATE. No code from GPL projects (JunoX): reference and test oracle only, credited.
+  The emulator is an approximate stand-in; the app is an editor and a way to learn the Juno-60.
