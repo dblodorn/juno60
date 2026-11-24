@@ -5,5 +5,6 @@ export type ChangeKind = "FEATURE" | "ENHANCEMENT" | "FIX";
 export interface Change { date: string; type: ChangeKind; text: string }
 
 export const CHANGELOG: Change[] = [
+  { date: "2026-11-24", type: "FEATURE", text: "LIBRARY → SHARED: share patches in a public list, open anyone's, and rename, update or delete your own, no account needed. Roland's 56 factory patches are in it." },
   { date: "2026-11-24", type: "FEATURE", text: "First release: edit a Juno-60 patch on its panel (LFO, DCO, HPF, VCF, VCA, ENV, CHORUS), hear it with an approximate emulator, play it with KEYS, the computer keys or MIDI IN, and keep patches in LIBRARY → LOCAL with .json import and export." },
 ];

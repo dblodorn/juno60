@@ -58,7 +58,14 @@ Run from the root; they fan out to the workspace (`pnpm -F <name> <script>` for 
   - `components/Editor.tsx`: the history reducer, SOUND, KEYS, AUDIO, MIDI IN, the panel. `PANEL` lists the sections
     in the Juno-60's order; PULSE/SAW/SUB draw as checkboxes, HPF as a four-position slider, CHORUS as the two
     buttons I and II (the value is their bits: 1 I, 2 II, 3 I+II).
-  - `components/Library.tsx`: LOCAL (save, open, delete, search, `.json` in and out) and COLOPHON.
+  - `components/Library.tsx`: LOCAL (save, open, delete, search, `.json` in and out), SHARED and COLOPHON.
+  - `components/Shared.tsx` (SHARED, from dx7's): the public list through Relay (`dmbkSoundJuno60Voices` and the
+    `Juno60Voice` mutations on dmbk-graphql-api's `juno60-voices`), SAVE TO LOCAL. `lib/device.ts` holds the device
+    key (`juno60.deviceKey`; the API stores only its hash; never put it in a URL). `lib/juno60/names.ts` is a copy of the
+    API's obscene-name check: keep the two in step. `app/api/graphql/route.ts` forwards persisted operations with
+    `DMBK_GRAPHQL_API_KEY` (the `juno60` client; Vercel Production and Preview, and `apps/editor/.env.local` to share
+    from `pnpm dev`); it throws without it in production. `pnpm schema:pull` refreshes
+    `schemas/dmbk-graphql-api.graphql`; `pnpm relay` compiles (dev, build and typecheck run it).
   - `lib/audio.ts`, `lib/store.ts` (`juno60.*`): from dx7. `lib/router.ts`: held-key counting for KEYS, the
     computer keys and MIDI IN. `lib/midi.ts`: MIDI IN only, notes only, no SysEx, access on the CONNECT click.
   - `lib/help.ts`: the (?) notes, written to teach; each says where the emulator estimates. `lib/colophon.ts`.
@@ -73,8 +80,10 @@ Run from the root; they fan out to the workspace (`pnpm -F <name> <script>` for 
 - **Emulation source:** written fresh. Andy Harman's Juno-60 analysis (MIT) is ported with a `NOTICE`.
   **Never copy code from JunoX (GPL-3.0)**; it may serve as a reference and a test oracle (outputs compared) and is
   credited. TAL-U-NO-LX is a commercial plugin, linked as a resource only.
-- **Factory patches** (Roland's 56): not included. Whether to seed them into the shared library is the user's call
-  (Roland is still in business), as with the DX7's ROM cards.
+- **Factory patches** (Roland's 56, by the user's choice of 2026-11-24): `factory/roland-juno60-factory.json`, built by
+  `node scripts/factory-patches.ts <Juno60.csv>` from the factory patch sheet Andy Harman transcribed for JunoX (data
+  only), and saved in SHARED by dmbk-graphql-api's `npm run juno60:import`. Names over 16 characters are shortened in
+  the script.
 - **Names:** synth id `roland-juno60`, menu name `ROLAND JUNO-60`, localStorage prefix `juno60.*`.
 
 ## Constraints
