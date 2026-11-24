@@ -89,7 +89,8 @@ export const HELP = {
   library: {
     title: "LIBRARY",
     body: [
-      "LOCAL keeps patches in this browser: save the one you're editing, open, rename or delete them, and move them in and out as .json files.",
+      "LOCAL keeps patches in this browser: save the one you're editing, open or delete them, and move them in and out as .json files.",
+      "SHARED is a public list anyone can open, with Roland's 56 factory patches: share yours without an account, and rename, update or delete them from the browser you shared them from.",
       "COLOPHON: the typeface, what this editor is for, the work it builds on, and pages elsewhere about the Juno-60.",
     ],
   },

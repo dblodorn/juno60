@@ -20,7 +20,7 @@ export const PRIOR_WORK: Link[] = [
   {
     name: "JUNOX (ANDY HARMAN, DANIELE ZANNOTTI)",
     url: "https://github.com/pendragon-andyh/junox",
-    text: "A Web Audio emulation of the Juno-60 (GPL-3.0). Its factory patch sheet showed which controls a patch stores and how the panel reads them. No code was taken.",
+    text: "A Web Audio emulation of the Juno-60 (GPL-3.0). Its factory patch sheet showed which controls a patch stores and how the panel reads them, and Roland's 56 factory patches in SHARED come from it. No code was taken.",
   },
 ];
 

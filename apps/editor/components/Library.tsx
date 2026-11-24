@@ -1,10 +1,12 @@
 "use client";
 
 // LIBRARY: a sheet on the right with tabs. LOCAL: patches kept in this browser (save, open, delete, search, .json
-// in and out). COLOPHON: the typeface, the design system, ABOUT, PRIOR WORK and RESOURCES (components/Colophon.tsx).
-// Loaded with next/dynamic the first time LIBRARY is pressed.
+// in and out). SHARED: the public list on the dmbk GraphQL API, Roland's factory patches among them
+// (components/Shared.tsx, its own chunk with Relay). COLOPHON: the typeface, the design system, ABOUT, PRIOR WORK and
+// RESOURCES (components/Colophon.tsx). Loaded with next/dynamic the first time LIBRARY is pressed.
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { Button, Leader, Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, Tabs, tabPanelProps } from "@dblodorn/sound-ui";
 import * as V from "../lib/juno60/codec";
 import { entry, fromB64, store, type Entry } from "../lib/store";
@@ -13,7 +15,9 @@ import Colophon from "./Colophon";
 import Info from "./Info";
 import { NOTE, ROW, SMALL } from "./params";
 
-const TABS = [{ value: "local", label: "LOCAL" }, { value: "colophon", label: "COLOPHON" }] as const;
+const Shared = dynamic(() => import("./Shared"), { ssr: false, loading: () => <p className={NOTE}>LOADING…</p> });
+
+const TABS = [{ value: "local", label: "LOCAL" }, { value: "shared", label: "SHARED" }, { value: "colophon", label: "COLOPHON" }] as const;
 type Tab = (typeof TABS)[number]["value"];
 
 const date = (iso: string): string => iso.slice(0, 10);
@@ -71,9 +75,20 @@ export default function Library({ open, onOpenChange, library, updateLibrary, vo
         <Tabs label="LIBRARY" idPrefix="lib" tabs={TABS} value={tab} onChange={chooseTab} />
         <SheetDescription id="lib-desc" className={NOTE}>
           {tab === "local" ? "Kept in this browser. Export and import .json files to move patches between machines."
+            : tab === "shared" ? "Juno-60 patches anyone can open, Roland's 56 factory patches among them. What you share here is public, and names are checked before they're listed."
             : "The typeface and the design system, what this editor is for, the work it builds on, then pages elsewhere about the Juno-60. Links open in a new tab."}
         </SheetDescription>
         <div {...tabPanelProps("lib", "colophon", tab)}><Colophon /></div>
+        {tab === "shared" && (
+          <div {...tabPanelProps("lib", "shared", tab)} className="grid gap-3">
+            <Shared voice={voice} onOpen={onOpen} onSaveLocal={bytes => {
+              const name = V.getName(bytes) || "UNTITLED";
+              updateLibrary(list => [entry(name, bytes), ...list]);
+              setMsg(`SAVED ${name} TO LOCAL.`);
+            }} />
+            {msg && <p role="status" className={NOTE}>{msg}</p>}
+          </div>
+        )}
         <div {...tabPanelProps("lib", "local", tab)} className="grid gap-3.5 [&[hidden]]:hidden">
           <div className={ROW + " mt-0"}>
             <Button onClick={saveCurrent}>SAVE CURRENT</Button>
