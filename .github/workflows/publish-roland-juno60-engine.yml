@@ -1,6 +1,11 @@
 # Publishes @dblodorn/roland-juno60-engine to GitHub Packages when a tag roland-juno60-engine@<version> is pushed.
-# Nothing is published unless the tag matches package.json and typecheck, tests, build and the packed smoke
-# test all pass. Other engine packages copy this file with their own name.
+# Nothing is published unless the tag matches package.json and typecheck, tests, build and the packed smoke test
+# all pass.
+#
+# The engine is copied out of the workspace and built on its own: pnpm verifies the whole workspace lockfile on
+# install and before running scripts, and the editor's design-system packages are private to another repo, so this
+# job's token can't read them. The engine has no runtime dependencies; its dev tools are pinned in its package.json,
+# and esbuild needs no install script (its platform binary is an optional dependency).
 name: publish roland-juno60-engine
 
 on:
@@ -11,30 +16,38 @@ permissions:
   contents: read
   packages: write
 
+env:
+  ENGINE: ${{ github.workspace }}/../engine/packages/roland-juno60-engine
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/roland-juno60-engine
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4 # version from packageManager in the root package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
           registry-url: https://npm.pkg.github.com
           scope: "@dblodorn"
-      # The engine on its own, outside the workspace: pnpm checks the whole workspace lockfile (even with --filter),
-      # and the editor's design-system packages are private to another repo, so this job's token can't read them.
-      # The engine has no runtime dependencies; its dev tools are pinned in its package.json.
-      - run: pnpm install --ignore-workspace --no-frozen-lockfile
+      - name: Copy the engine out of the workspace
+        run: |
+          mkdir -p "$ENGINE"
+          cp tsconfig.base.json "$ENGINE/../.."
+          cp -R packages/roland-juno60-engine/. "$ENGINE"
+      - run: pnpm install --no-frozen-lockfile --ignore-scripts
+        working-directory: ${{ env.ENGINE }}
       - run: node scripts/check-tag.ts "$GITHUB_REF_NAME"
+        working-directory: ${{ env.ENGINE }}
       - run: pnpm typecheck
+        working-directory: ${{ env.ENGINE }}
       - run: pnpm test
+        working-directory: ${{ env.ENGINE }}
       - run: pnpm build
+        working-directory: ${{ env.ENGINE }}
       - run: pnpm smoke
+        working-directory: ${{ env.ENGINE }}
       - run: pnpm publish --no-git-checks
+        working-directory: ${{ env.ENGINE }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
