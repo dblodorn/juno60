@@ -26,9 +26,10 @@ jobs:
           cache: pnpm
           registry-url: https://npm.pkg.github.com
           scope: "@dblodorn"
-      # the engine and its dev tools only: the editor's design-system packages are private to another repo
-      - run: pnpm install --frozen-lockfile --filter "@dblodorn/roland-juno60-engine..."
-        working-directory: .
+      # The engine on its own, outside the workspace: pnpm checks the whole workspace lockfile (even with --filter),
+      # and the editor's design-system packages are private to another repo, so this job's token can't read them.
+      # The engine has no runtime dependencies; its dev tools are pinned in its package.json.
+      - run: pnpm install --ignore-workspace --no-frozen-lockfile
       - run: node scripts/check-tag.ts "$GITHUB_REF_NAME"
       - run: pnpm typecheck
       - run: pnpm test
