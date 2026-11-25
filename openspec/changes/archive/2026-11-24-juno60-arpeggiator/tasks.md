@@ -17,13 +17,13 @@
 
 ## 3. Release the engine
 
-- [ ] 3.1 Merge the engine work (in the same PR as the editor, after dmbk-graphql-api#52 deploys), push tag `roland-juno60-engine@0.2.0`, and verify the publish run succeeds and 0.2.0 is listed on GitHub Packages
+- [x] 3.1 Merge the engine work (in the same PR as the editor, after dmbk-graphql-api#52 deploys), push tag `roland-juno60-engine@0.2.0`, and verify the publish run succeeds and 0.2.0 is listed on GitHub Packages
 
 ## 4. API (dmbk-graphql-api, its own change and PR)
 
 - [x] 4.1 Open an OpenSpec change there for `juno60-voices`: an optional `arpeggio` on `Juno60Voice`, its input, and the duplicate rule covering `data` plus `arpeggio`; verify `openspec validate --strict` passes
 - [x] 4.2 Add the `Juno60Arpeggio` type, the `Juno60ArpeggioMode` enum, `Juno60ArpeggioInput` on save and update (same checks as `readArpeggio`, `BAD_USER_INPUT` naming the field), storage as an optional subdocument, and the duplicate check; verify `npm run typecheck` and the mutation tests (save with and without `arpeggio`, a refused field, the same sound with two arpeggios)
-- [ ] 4.3 Update the `juno60_voices` collection validator (`juno60:collection -- --apply`) before deploying, then merge and deploy; verify that production returns `arpeggio: null` for the factory patches
+- [x] 4.3 Update the `juno60_voices` collection validator (`juno60:collection -- --apply`) before deploying, then merge and deploy; verify that production returns `arpeggio: null` for the factory patches
 
 ## 5. Editor
 
@@ -36,10 +36,10 @@
 
 ## 6. windchime (its own PR, after 3.1 and 4.3)
 
-- [ ] 6.1 Bump `@dblodorn/roland-juno60-engine` to 0.2.0 (release-age exclude), re-pull the schema, and add the optional `loadArpeggio` to `SynthLike`; verify `pnpm build`
-- [ ] 6.2 Fetch `arpeggio` with a Juno-60 patch (inline fragment on `Juno60Voice` in `lib/patches.ts`) and call `loadArpeggio` when the patch loads, using the default for INIT, a missing value or another synth; verify in Playwright, with a stubbed patch whose arpeggio is on, that the engine receives the `arp` message and that strikes arpeggiate
-- [ ] 6.3 Changelog line, CLAUDE.md (an external synth's arpeggio travels with the patch; links and saves unchanged); verify typecheck and build, then open the PR
+- [x] 6.1 Bump `@dblodorn/roland-juno60-engine` to 0.2.0 (release-age exclude), re-pull the schema, and add the optional `loadArpeggio` to `SynthLike`; verify `pnpm build`
+- [x] 6.2 Fetch `arpeggio` with a Juno-60 patch (inline fragment on `Juno60Voice` in `lib/patches.ts`) and call `loadArpeggio` when the patch loads, using the default for INIT, a missing value or another synth; verify in Playwright, with a stubbed patch whose arpeggio is on, that the engine receives the `arp` message and that strikes arpeggiate
+- [x] 6.3 Changelog line, CLAUDE.md (an external synth's arpeggio travels with the patch; links and saves unchanged); verify typecheck and build, then open the PR
 
 ## 7. Close out
 
-- [ ] 7.1 After everything has deployed, check live that an editor patch saved with the arpeggiator on arpeggiates in the editor and in windchime, then close issue #4 and archive this change
+- [x] 7.1 After everything has deployed, check live that an editor patch saved with the arpeggiator on arpeggiates in the editor and in windchime, then close issue #4 and archive this change (checked live by the user, 2026-11-24)
