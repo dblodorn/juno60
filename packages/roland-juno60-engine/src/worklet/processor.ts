@@ -14,6 +14,8 @@ class Juno60Processor extends AudioWorkletProcessor {
       if (m.type === "patch") this.engine.setPatch(m.data);
       else if (m.type === "noteOn") this.engine.noteOn(m.note);
       else if (m.type === "noteOff") this.engine.noteOff(m.note);
+      else if (m.type === "arp") this.engine.setArpeggio(m.on, m.mode, m.range, m.rate);
+      else if (m.type === "hold") this.engine.setHold(m.on);
       else this.engine.allOff();
     };
   }

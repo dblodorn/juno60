@@ -47,10 +47,29 @@ button.onclick = async () => {
 - `loadVoice(bytes)` takes a 42-byte patch (see below) and throws on anything else. Notes already sounding take the
   new patch at once, as the Juno-60's live panel does.
 - `noteOn(note, velocity?)`: the Juno-60 has no velocity, so velocity only matters as 0 (a note-off).
+- `loadArpeggio(settings)` and `setHold(on)`: the arpeggiator (below).
 - `output` is stereo: the chorus is stereo.
 - `createSynth(ctx, { workletUrl })` loads the worklet from a URL you serve (`@dblodorn/roland-juno60-engine/worklet.js`)
   instead of a Blob URL, for pages whose Content-Security-Policy refuses `blob:` scripts.
 - `createOfflineSynth(sampleRate)` renders without Web Audio: `render(out)` (mono) or `renderStereo(left, right)`.
+
+## The arpeggiator
+
+The Juno-60's arpeggiator: the keys held play one at a time in pitch order, `UP`, `DOWN` or `UP_DOWN` (the ends
+not repeated), over 1, 2 or 3 octaves, at RATE. Steps are timed to the sample inside the worklet, so a busy page
+doesn't move them. HOLD keeps released keys playing (with the arpeggiator off too, as on the instrument) until new
+keys are played after every key was let go, or HOLD is turned off.
+
+```ts
+synth.loadArpeggio({ version: 1, on: true, mode: "UP", range: 2, rate: 80 });
+synth.setHold(true);
+```
+
+Its settings are a section of their own, kept beside a patch and never inside its 42 bytes: loading one never
+changes the other, and a patch without settings plays with `DEFAULT_ARPEGGIO` (off). The hardware never stored
+them; this project does, so an arpeggio can belong to a sound. `readArpeggio(x)` checks settings and throws naming
+the field; HOLD is a performance switch, not a setting. The RATE curve and each step's length are estimates
+(`src/engine/calibration.ts`).
 
 ## The patch
 

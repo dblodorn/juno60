@@ -4,12 +4,14 @@
 // switch is unlocked in the same gesture. The context, the
 // output device and SOUND off (suspend) are the editor's; the synth only plays.
 
-import { createSynth, type Synth } from "@dblodorn/roland-juno60-engine";
+import { createSynth, DEFAULT_ARPEGGIO, type Arpeggio, type Synth } from "@dblodorn/roland-juno60-engine";
 
 let ctx: AudioContext | null = null;
 let synth: Synth | null = null;
 let starting: Promise<void> | null = null;
 let voice: Uint8Array | null = null; // latest patch, sent again when the worklet comes up
+let arpeggio: Arpeggio = DEFAULT_ARPEGGIO; // latest arpeggiator settings, likewise
+let hold = false;
 let sinkId = ""; // chosen output device; "" is the system default
 let unlockEl: HTMLAudioElement | null = null; // the looping silent element (see unlock)
 
@@ -61,6 +63,8 @@ export function start(): Promise<void> {
     const s = await createSynth(c);
     s.output.connect(c.destination);
     if (voice) s.loadVoice(voice);
+    s.loadArpeggio(arpeggio);
+    s.setHold(hold);
     synth = s;
     if (sinkId && deviceChoiceSupported()) await c.setSinkId(sinkId).catch(() => { /* unplugged: stay on the default */ });
     await resumed;
@@ -80,6 +84,16 @@ export const running = (): boolean => !!ctx && !!synth && ctx.state === "running
 export function setVoice(data: Uint8Array): void {
   voice = data;
   synth?.loadVoice(data); // the synth copies it, so later edits can't race the audio thread
+}
+
+// the arpeggiator settings beside the patch (checked by the synth), and HOLD, which is never saved
+export function setArpeggio(a: Arpeggio): void {
+  arpeggio = a;
+  synth?.loadArpeggio(a);
+}
+export function setHold(on: boolean): void {
+  hold = on;
+  synth?.setHold(on);
 }
 
 export const noteOn = (note: number): void => synth?.noteOn(note);

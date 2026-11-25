@@ -5,6 +5,7 @@
 
 import { checkNote, noteOnEvent } from "./notes.ts";
 import { readVoice } from "./codec.ts";
+import { ARPEGGIO_MODES, readArpeggio, type Arpeggio } from "./arpeggio.ts";
 import code from "./worklet/code.generated.ts";
 import { PROCESSOR, type ToWorklet } from "./worklet/messages.ts";
 
@@ -21,6 +22,11 @@ export interface Synth {
   // 42 patch bytes. Throws on anything else and keeps the patch it had. Notes already sounding take the new patch,
   // as the Juno-60's live panel does.
   loadVoice(patch: Uint8Array): void;
+  // Arpeggiator settings (see arpeggio.ts), kept apart from the patch: loading one never changes the other. Throws
+  // on bad settings and keeps the ones it had. A running arpeggio takes them at once (RATE from its next step).
+  loadArpeggio(settings: Arpeggio): void;
+  // HOLD, a performance switch: never part of the settings.
+  setHold(on: boolean): void;
   // note 0-127, velocity 0-127 (0 is a note-off; the Juno-60 has no velocity otherwise). Throws on values out of range.
   noteOn(note: number, velocity?: number): void;
   noteOff(note: number): void;
@@ -53,6 +59,11 @@ export async function createSynth(ctx: BaseAudioContext, opts: SynthOptions = {}
   return {
     output: node,
     loadVoice(patch) { post({ type: "patch", data: readVoice(patch) }); }, // checked here, never in the audio thread
+    loadArpeggio(settings) {
+      const a = readArpeggio(settings);
+      post({ type: "arp", on: a.on, mode: ARPEGGIO_MODES.indexOf(a.mode), range: a.range, rate: a.rate });
+    },
+    setHold(on) { post({ type: "hold", on: on === true }); },
     noteOn(note, velocity = 100) {
       const e = noteOnEvent(note, velocity);
       post({ type: e.off ? "noteOff" : "noteOn", note });

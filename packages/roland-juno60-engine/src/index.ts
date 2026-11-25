@@ -3,6 +3,10 @@
 
 export { displayOf, get, getName, readVoice } from "./codec.ts";
 export {
+  ARPEGGIO_MODES, ARPEGGIO_RANGES, ARPEGGIO_VERSION, arpeggioRateDisplay, DEFAULT_ARPEGGIO, readArpeggio, type Arpeggio,
+  type ArpeggioMode,
+} from "./arpeggio.ts";
+export {
   CHORUS_MODES, ENV_POLARITIES, fieldOf, HPF_POSITIONS, LFO_TRIGGERS, NAME_BYTE, NAME_LENGTH, OFF_ON, PATCH_NUMBERS,
   PWM_MODES, RANGES, SECTIONS, SLIDER_MAX, toPanel, VCA_MODES, VOICE_BYTES, VOICE_FIELDS, voiceField, type Field, type Section,
 } from "./params.ts";

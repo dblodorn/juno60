@@ -21,3 +21,19 @@ test("render never allocates", () => {
   const grew = process.memoryUsage().heapUsed - before;
   assert.ok(grew < 64 * 1024, `heap grew ${grew} bytes`);
 });
+
+test("render never allocates while arpeggiating", () => {
+  const gc = (globalThis as { gc?: () => void }).gc;
+  if (!gc) return;
+  const s = createOfflineSynth(SR);
+  s.loadVoice(patch({ chorus: 2, pulse: 1, sub: 1, dcoSub: 100, vcfRes: 60 }));
+  s.loadArpeggio({ version: 1, on: true, mode: "UP_DOWN", range: 3, rate: 127 });
+  for (const n of [48, 52, 55, 60, 64, 67]) s.noteOn(n);
+  const l = new Float32Array(128), r = new Float32Array(128);
+  for (let i = 0; i < 3000; i++) s.renderStereo(l, r);
+  gc();
+  const before = process.memoryUsage().heapUsed;
+  for (let i = 0; i < 1000; i++) s.renderStereo(l, r);
+  const grew = process.memoryUsage().heapUsed - before;
+  assert.ok(grew < 64 * 1024, `heap grew ${grew} bytes`);
+});
