@@ -10,8 +10,10 @@ pnpm dev
 pnpm test
 ```
 
-Edit a patch on the Juno-60's panel (LFO, DCO, HPF, VCF, VCA, ENV, CHORUS), hear it with SOUND, play it with KEYS,
-the Z–M keys or a keyboard on MIDI IN, and keep patches in LIBRARY → LOCAL, with `.json` import and export.
+Edit a patch on the Juno-60's panel (ARPEGGIO, LFO, DCO, HPF, VCF, VCA, ENV, CHORUS), hear it with SOUND, play it
+with KEYS, the Z–M keys or a keyboard on MIDI IN, and keep patches in LIBRARY → LOCAL (with `.json` import and
+export) and SHARED. A patch's arpeggiator settings are kept beside its 42 sound bytes, never inside them, so they
+travel with it to files, SHARED and windchime; the Juno-60 itself never stored them.
 
 The emulator is an approximate stand-in for the Juno-60, not a replacement for it: some curves are measured from a
 real Juno-60 ([Andy Harman's analysis](https://github.com/pendragon-andyh/Juno60)), the rest are estimates. This is an

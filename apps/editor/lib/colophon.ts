@@ -28,7 +28,7 @@ export const RESOURCES: Link[] = [
   {
     name: "ROLAND JUNO-60 (WIKIPEDIA)",
     url: "https://en.wikipedia.org/wiki/Roland_Juno-60",
-    text: "The instrument's history and specifications: six voices, one DCO per voice, the chorus, 56 patch memories and the DCB port.",
+    text: "The instrument's history and specifications: six voices, one DCO per voice, the chorus, the arpeggiator, 56 patch memories and the DCB port. The arpeggiator here is written from this description of the panel; no other arpeggiator's code was used.",
   },
   {
     name: "JUNOX DEMO",

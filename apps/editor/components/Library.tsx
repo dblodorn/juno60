@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button, Leader, Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, Tabs, tabPanelProps } from "@dblodorn/sound-ui";
 import * as V from "../lib/juno60/codec";
-import { entry, fromB64, store, type Entry } from "../lib/store";
+import { entry, patchOf, store, type Entry } from "../lib/store";
 import { download, fileName } from "../lib/files";
 import Colophon from "./Colophon";
 import Info from "./Info";
@@ -27,12 +27,12 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   library: Entry[];
   updateLibrary: (fn: (list: Entry[]) => Entry[]) => void;
-  voice: Uint8Array;
-  onOpen: (bytes: Uint8Array) => void;
+  patch: V.Patch; // the patch being edited, with its arpeggiator settings
+  onOpen: (p: V.Patch) => void;
   onSaved: (msg: string) => void;
 }
 
-export default function Library({ open, onOpenChange, library, updateLibrary, voice, onOpen }: Props) {
+export default function Library({ open, onOpenChange, library, updateLibrary, patch, onOpen }: Props) {
   const [tab, setTab] = useState<Tab>("local");
   const [msg, setMsg] = useState("");
   const [query, setQuery] = useState("");
@@ -46,17 +46,17 @@ export default function Library({ open, onOpenChange, library, updateLibrary, vo
   const chooseTab = (t: Tab) => { setTab(t); setMsg(""); store.set("library.tab", t); };
 
   function saveCurrent() {
-    const name = V.getName(voice) || "UNTITLED";
-    updateLibrary(list => [entry(name, voice), ...list]);
+    const name = V.getName(patch.data) || "UNTITLED";
+    updateLibrary(list => [entry(name, patch), ...list]);
     setMsg(`SAVED ${name}.`);
   }
 
   async function onFiles(files: File[]) {
-    const added: Uint8Array[] = [], problems: string[] = [];
+    const added: V.Patch[] = [], problems: string[] = [];
     for (const f of files) {
       try { added.push(...V.fromFile(await f.text())); } catch (e) { problems.push(`${f.name.toUpperCase()}: ${e instanceof Error ? e.message : "UNREADABLE."}`); }
     }
-    if (added.length) updateLibrary(list => [...added.map(p => entry(V.getName(p) || "UNTITLED", p)), ...list]);
+    if (added.length) updateLibrary(list => [...added.map(p => entry(V.getName(p.data) || "UNTITLED", p)), ...list]);
     setMsg([added.length && `ADDED ${added.length} PATCH${added.length === 1 ? "" : "ES"}.`, ...problems].filter(Boolean).join(" "));
   }
 
@@ -81,9 +81,9 @@ export default function Library({ open, onOpenChange, library, updateLibrary, vo
         <div {...tabPanelProps("lib", "colophon", tab)}><Colophon /></div>
         {tab === "shared" && (
           <div {...tabPanelProps("lib", "shared", tab)} className="grid gap-3">
-            <Shared voice={voice} onOpen={onOpen} onSaveLocal={bytes => {
-              const name = V.getName(bytes) || "UNTITLED";
-              updateLibrary(list => [entry(name, bytes), ...list]);
+            <Shared patch={patch} onOpen={onOpen} onSaveLocal={p => {
+              const name = V.getName(p.data) || "UNTITLED";
+              updateLibrary(list => [entry(name, p), ...list]);
               setMsg(`SAVED ${name} TO LOCAL.`);
             }} />
             {msg && <p role="status" className={NOTE}>{msg}</p>}
@@ -93,7 +93,7 @@ export default function Library({ open, onOpenChange, library, updateLibrary, vo
           <div className={ROW + " mt-0"}>
             <Button onClick={saveCurrent}>SAVE CURRENT</Button>
             <Button onClick={() => fileRef.current?.click()}>IMPORT .JSON</Button>
-            <Button disabled={!library.length} onClick={() => download(V.toFile(library.map(e => fromB64(e.data))), "juno60-library.json")}>EXPORT ALL</Button>
+            <Button disabled={!library.length} onClick={() => download(V.toFile(library.map(patchOf)), "juno60-library.json")}>EXPORT ALL</Button>
             <input ref={fileRef} type="file" accept=".json,application/json" multiple hidden onChange={e => { onFiles([...(e.target.files ?? [])]); e.target.value = ""; }} />
           </div>
           {msg && <p role="status" className={NOTE}>{msg}</p>}
@@ -112,8 +112,8 @@ export default function Library({ open, onOpenChange, library, updateLibrary, vo
                   <span className={SMALL}>{date(e.savedAt)}</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <Button onClick={() => onOpen(fromB64(e.data))}>OPEN</Button>
-                  <Button onClick={() => download(V.toFile([fromB64(e.data)]), fileName(e.name))}>.JSON</Button>
+                  <Button onClick={() => onOpen(patchOf(e))}>OPEN</Button>
+                  <Button onClick={() => download(V.toFile([patchOf(e)]), fileName(e.name))}>.JSON</Button>
                   <Button onClick={() => {
                     if (confirming !== e.id) { setConfirming(e.id); return; }
                     updateLibrary(list => list.filter(x => x.id !== e.id));

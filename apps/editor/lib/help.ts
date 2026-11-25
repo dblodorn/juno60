@@ -7,6 +7,13 @@ export interface Help { title: string; body: string[]; editor?: string; source?:
 const HARMAN = "Andy Harman's measurements of a Juno-60 (github.com/pendragon-andyh/Juno60)";
 
 export const HELP = {
+  arpeggio: {
+    title: "ARPEGGIO",
+    body: [
+      "Hold a chord and the arpeggiator plays its notes one at a time, lowest to highest (UP), highest to lowest (DOWN), or up then down (U&D), over one, two or three octaves (RANGE). RATE sets how fast. HOLD keeps playing the last chord after you let go, until you play a new one; it holds notes with the arpeggiator off too.",
+    ],
+    editor: "The Juno-60 never stored arpeggiator settings; this editor keeps them beside the patch (not in its 42 bytes), so an arpeggio travels with the sound to LOCAL, SHARED, files and windchime. HOLD isn't saved. Steps are timed inside the emulator to the sample. The RATE range (1.5 to 25 steps a second) and each step's length (half the step) are our estimates, and whether the hardware's U&D repeats the end notes is unchecked.",
+  },
   lfo: {
     title: "LFO",
     body: [

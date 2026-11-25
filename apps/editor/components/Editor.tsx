@@ -2,8 +2,9 @@
 
 // The editor's one client root, built on dx7's components/Editor.tsx: the header (name, undo, INIT, SOUND, KEYS,
 // AUDIO, MIDI, LIBRARY), the AUDIO and MIDI dialogs, computer-key audition, and the Juno-60's panel in its own order:
-// LFO, DCO, HPF, VCF, VCA, ENV, CHORUS. Every edit goes through the codec's set() on the patch's 42 bytes
-// (lib/juno60/codec.ts).
+// ARPEGGIO, LFO, DCO, HPF, VCF, VCA, ENV, CHORUS. Every sound edit goes through the codec's set() on the patch's 42
+// bytes (lib/juno60/codec.ts); ARPEGGIO edits change only the arpeggiator settings kept beside them. HOLD is a
+// performance switch: never saved, off on load.
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -13,6 +14,7 @@ import * as M from "../lib/midi";
 import { router } from "../lib/router";
 import * as V from "../lib/juno60/codec";
 import { fromB64, loadLibrary, saveLibrary, store, toB64, type Entry } from "../lib/store";
+import ArpeggioPanel from "./ArpeggioPanel";
 import type { HelpKey } from "../lib/help";
 import Info from "./Info";
 import { Check, FieldRow, H2, NOTE, Param, ParamSelect, ParamSlider, ROW, SMALL } from "./params";
@@ -29,21 +31,21 @@ const portName = (p: M.PortInfo): string => p.name.toUpperCase() + (p.manufactur
 // computer keys for auditioning: the bottom letter row plays C4 to C5
 const KEYS: Record<string, number> = { z: 60, s: 61, x: 62, d: 63, c: 64, v: 65, g: 66, b: 67, h: 68, n: 69, j: 70, m: 71, ",": 72 };
 
-// Undo history: every edit pushes the whole patch (42 bytes), capped.
+// Undo history: every edit pushes the whole patch (42 bytes and its arpeggiator settings), capped.
 const LIMIT = 200;
-interface History { past: Uint8Array[]; voice: Uint8Array; future: Uint8Array[] }
-type Action = { type: "edit"; voice: Uint8Array } | { type: "undo" } | { type: "redo" };
+interface History { past: V.Patch[]; patch: V.Patch; future: V.Patch[] }
+type Action = { type: "edit"; patch: V.Patch } | { type: "undo" } | { type: "redo" };
 
 function history(state: History, action: Action): History {
   switch (action.type) {
-    case "edit": return { past: [...state.past, state.voice].slice(-LIMIT), voice: action.voice, future: [] };
+    case "edit": return { past: [...state.past, state.patch].slice(-LIMIT), patch: action.patch, future: [] };
     case "undo": {
       const prev = state.past.at(-1);
-      return prev ? { past: state.past.slice(0, -1), voice: prev, future: [state.voice, ...state.future] } : state;
+      return prev ? { past: state.past.slice(0, -1), patch: prev, future: [state.patch, ...state.future] } : state;
     }
     case "redo": {
       const next = state.future[0];
-      return next ? { past: [...state.past, state.voice], voice: next, future: state.future.slice(1) } : state;
+      return next ? { past: [...state.past, state.patch], patch: next, future: state.future.slice(1) } : state;
     }
   }
 }
@@ -62,7 +64,9 @@ const ENV_LABELS: Record<string, string> = { envA: "ATTACK", envD: "DECAY", envS
 const SWITCHES = new Set(["pulse", "saw", "sub"]);
 
 export default function Editor() {
-  const [{ voice, past, future }, dispatch] = useReducer(history, null, (): History => ({ voice: V.initVoice(), past: [], future: [] }));
+  const [{ patch, past, future }, dispatch] = useReducer(history, null, (): History => ({ patch: V.initPatch(), past: [], future: [] }));
+  const voice = patch.data, arpeggio = patch.arpeggio;
+  const [hold, setHoldState] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const [midiOpen, setMidiOpen] = useState(false);
   const [midiSupported, setMidiSupported] = useState<boolean | null>(null);
@@ -81,21 +85,31 @@ export default function Editor() {
   const [library, setLibrary] = useState<Entry[]>([]);
   const restored = useRef(false);
 
-  const edit = useCallback((next: Uint8Array) => dispatch({ type: "edit", voice: next }), []);
+  const editPatch = useCallback((next: V.Patch) => dispatch({ type: "edit", patch: next }), []);
+  const edit = useCallback((next: Uint8Array) => editPatch({ data: next, arpeggio }), [editPatch, arpeggio]);
   const setValues = useCallback((values: Record<string, number>) => edit(V.setMany(voice, values)), [edit, voice]);
+  const editArpeggio = useCallback((changes: Parameters<typeof V.setArpeggio>[1]) => editPatch({ data: voice, arpeggio: V.setArpeggio(arpeggio, changes) }), [editPatch, voice, arpeggio]);
+  const toggleHold = () => setHoldState(h => { A.setHold(!h); return !h; });
   const val = (key: string): number => V.get(voice, key);
 
   // ---- persistence: read after mount so the server render matches ----
   useEffect(() => {
     setMidiSupported(M.supported());
     const saved = store.get<string | null>("voice", null);
-    if (saved) { try { dispatch({ type: "edit", voice: V.readVoice(fromB64(saved)) }); } catch { /* damaged: keep INIT */ } }
+    if (saved) {
+      let arp = V.DEFAULT_ARPEGGIO;
+      try { const a = store.get<unknown>("arpeggio", null); if (a) arp = V.readArpeggio(a); } catch { /* damaged: off */ }
+      try { dispatch({ type: "edit", patch: { data: V.readVoice(fromB64(saved)), arpeggio: arp } }); } catch { /* damaged: keep INIT */ }
+    }
     M.setWanted(store.get("midiIn", ""));
     setLibrary(loadLibrary());
     setKeysOpen(store.get("keys.open", false));
     restored.current = true;
   }, []);
   useEffect(() => { if (restored.current) store.set("voice", toB64(voice)); }, [voice]);
+  useEffect(() => { if (restored.current) store.set("arpeggio", arpeggio); }, [arpeggio]);
+  // the arpeggiator settings reach the emulator like the patch: a running arpeggio takes them at once
+  useEffect(() => { A.setArpeggio(arpeggio); }, [arpeggio]);
   // every patch change reaches the emulator (a no-op until SOUND has started it); held notes take it at once
   useEffect(() => { A.setVoice(voice); }, [voice]);
   useEffect(() => { if (restored.current) store.set("keys.open", keysOpen); }, [keysOpen]);
@@ -247,7 +261,7 @@ export default function Editor() {
         </label>
         <Button onClick={() => dispatch({ type: "undo" })} disabled={!past.length}>UNDO</Button>
         <Button onClick={() => dispatch({ type: "redo" })} disabled={!future.length}>REDO</Button>
-        <Button onClick={() => edit(V.initVoice())}>INIT</Button>
+        <Button onClick={() => editPatch(V.initPatch())}>INIT</Button>
         <span className="flex items-center gap-1.5"><Button aria-pressed={sound} onClick={onSound}>SOUND</Button><Info k="sound" /></span>
         <span className="flex items-center gap-1.5"><Button aria-pressed={keysOpen} onClick={() => setKeysOpen(k => !k)}>KEYS</Button><Info k="keys" /></span>
         <Dialog open={audioOpen} onOpenChange={setAudioOpen}>
@@ -324,6 +338,7 @@ export default function Editor() {
       {msg && <p role="status" className={`${NOTE} max-w-none`}>{msg}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ArpeggioPanel arpeggio={arpeggio} onChange={editArpeggio} hold={hold} onHold={toggleHold} />
         {PANEL.map(s => (
           <section key={s.title} aria-label={s.title} className={`grid content-start gap-3.5 border border-foreground p-3 ${s.title === "DCO" ? "lg:row-span-2" : ""}`}>
             <div className="flex items-baseline gap-2"><h2 className={H2}>{s.title}</h2><Info k={s.info} /><Leader /></div>
@@ -350,8 +365,8 @@ export default function Editor() {
       </footer>
 
       {keysOpen && <KeyboardFloater onClose={() => setKeysOpen(false)} ensureSound={startSound} />}
-      <Library open={libOpen} onOpenChange={setLibOpen} library={library} updateLibrary={updateLibrary} voice={voice}
-        onOpen={bytes => { edit(bytes); setMsg(`OPENED ${V.getName(bytes) || "UNTITLED"}. UNDO GOES BACK TO WHAT WAS HERE.`); }}
+      <Library open={libOpen} onOpenChange={setLibOpen} library={library} updateLibrary={updateLibrary} patch={patch}
+        onOpen={p => { editPatch(p); setMsg(`OPENED ${V.getName(p.data) || "UNTITLED"}. UNDO GOES BACK TO WHAT WAS HERE.`); }}
         onSaved={m => setMsg(m)} />
     </main>
   );

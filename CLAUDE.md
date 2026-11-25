@@ -85,6 +85,13 @@ Run from the root; they fan out to the workspace (`pnpm -F <name> <script>` for 
   only), and saved in SHARED by dmbk-graphql-api's `npm run juno60:import`. Names over 16 characters are shortened in
   the script.
 - **Names:** synth id `roland-juno60`, menu name `ROLAND JUNO-60`, localStorage prefix `juno60.*`.
+- **Arpeggiator** (by the user's choice of 2026-11-24; `openspec/specs/juno60-arpeggiator`): in the engine (`src/engine/arp.ts`,
+  between the keys and the voices, steps timed to the sample, allocation-free), so the editor and windchime share it.
+  Its settings (`src/arpeggio.ts`: `version`, `on`, `mode`, `range`, `rate`; `readArpeggio`, `DEFAULT_ARPEGGIO`) sit
+  **beside** the 42 bytes, never inside them: `loadArpeggio()` apart from `loadVoice()`; the editor's `Patch` is
+  `{ data, arpeggio }`; LOCAL entries and `.json` files (version 2) carry `arpeggio` only when it isn't the default;
+  the API's `Juno60Voice.arpeggio` is its own field. HOLD is a performance switch (`setHold`), never saved, and sustains
+  released keys with the arpeggiator off too. The RATE curve and the gate are ESTIMATE.
 
 ## Constraints
 

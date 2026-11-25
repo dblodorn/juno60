@@ -6,4 +6,6 @@ export type ToWorklet =
   | { type: "patch"; data: Uint8Array } // 42 patch bytes, checked
   | { type: "noteOn"; note: number }
   | { type: "noteOff"; note: number }
-  | { type: "allOff" };
+  | { type: "allOff" }
+  | { type: "arp"; on: boolean; mode: number; range: number; rate: number } // checked; mode 0 UP, 1 DOWN, 2 UP_DOWN
+  | { type: "hold"; on: boolean };

@@ -27,9 +27,12 @@ try {
 
   // types, as a strict consumer sees them
   writeFileSync(path.join(dir, "consumer.ts"), `
-import { createOfflineSynth, createSynth, readVoice, VOICE_BYTES, type PatchSource, type Synth } from "${name}";
+import { createOfflineSynth, createSynth, DEFAULT_ARPEGGIO, readArpeggio, readVoice, VOICE_BYTES, type Arpeggio, type PatchSource, type Synth } from "${name}";
 const s = createOfflineSynth(48000);
 s.loadVoice(readVoice(new Uint8Array(VOICE_BYTES)));
+const arp: Arpeggio = readArpeggio({ ...DEFAULT_ARPEGGIO, on: true });
+s.loadArpeggio(arp);
+s.setHold(false);
 const lib: PatchSource = { list: async () => ({ items: [], next: null }), get: async () => new Uint8Array(VOICE_BYTES) };
 const later: (ctx: BaseAudioContext) => Promise<Synth> = ctx => createSynth(ctx, { workletUrl: "/worklet.js" });
 export { lib, later };
@@ -54,7 +57,15 @@ const peak = out.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
 if (!(peak > 0.05)) throw new Error("silent render, peak " + peak);
 const worklet = import.meta.resolve("${name}/worklet.js");
 if (!readFileSync(new URL(worklet), "utf8").includes("registerProcessor")) throw new Error("worklet.js is not the worklet");
-console.log("saw patch: peak " + peak.toFixed(3) + ", worklet.js ok");
+// an arpeggio: one voice at a time
+const a = createOfflineSynth(48000);
+a.loadVoice(voice);
+a.loadArpeggio({ version: 1, on: true, mode: "UP", range: 2, rate: 100 });
+a.noteOn(60); a.noteOn(64); a.noteOn(67);
+const out2 = new Float32Array(48000);
+a.render(out2);
+if (a.sounding() < 1 || a.sounding() > 2) throw new Error("the arpeggio should sound one step (and a release tail), got " + a.sounding());
+console.log("saw patch: peak " + peak.toFixed(3) + ", arpeggio ok, worklet.js ok");
 `);
   process.stdout.write(`smoke (${path.basename(tgz)}): ${run("node", ["play.mjs"])}`);
 } finally {

@@ -87,6 +87,14 @@ export const CHORUS = [
 export const CHORUS_WET = 0.7; // ESTIMATE: the delayed signal's level against the dry one
 export const CHORUS_LOWPASS_HZ = 9000; // ESTIMATE: the 12 dB/oct filter ahead of the BBDs (its cut-off isn't measured)
 
+// ---------- arpeggiator ----------
+
+// ESTIMATE: RATE from 1.5 to 25 steps a second, exponential in the slider. The hardware's arpeggio clock isn't in
+// Harman's analysis; compare with a recording (issue: calibration).
+export const arpStepsPerSecond = (s: number): number => 1.5 * Math.pow(25 / 1.5, s / 10);
+// ESTIMATE: each step's note is released halfway through the step; the envelope's own release carries over.
+export const ARP_GATE = 0.5;
+
 // ---------- output ----------
 
 export const OUTPUT_SCALE = 0.25; // ESTIMATE: one saw note at LEVEL 0 peaks near 0.2, so a chord with chorus stays under 1

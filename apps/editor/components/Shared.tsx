@@ -62,6 +62,7 @@ const RowFragment = graphql`
     id
     name
     data
+    arpeggio { version on mode range rate }
     createdAt
     updatedAt
     yours(creatorKey: $yoursKey)
@@ -106,9 +107,15 @@ const DeleteMutation = graphql`
 
 
 const date = (iso: string): string => iso.slice(0, 10);
-const patchOf = (data: string): Uint8Array | null => {
+const bytesOf = (data: string): Uint8Array | null => {
   try { const b = fromB64(data); return b.length === V.VOICE_BYTES ? b : null; } catch { return null; }
 };
+// a row's arpeggiator settings: none (or settings this editor can't read) is the default, off
+const arpeggioOf = (a: Shared_row$data["arpeggio"]): V.Arpeggio => {
+  try { return a ? V.readArpeggio({ ...a }) : V.DEFAULT_ARPEGGIO; } catch { return V.DEFAULT_ARPEGGIO; }
+};
+// what the API takes: null for the default, which it stores as none
+const arpeggioInput = (a: V.Arpeggio) => (V.isDefaultArpeggio(a) ? null : { version: a.version, on: a.on, mode: a.mode, range: a.range, rate: a.rate });
 
 // The saved patch goes on top of the list being shown, unless that list already has it (a repeat save) or
 // is a search the name might not match.
@@ -128,27 +135,28 @@ function prependSaved(connectionId: string | null, search: boolean) {
 }
 
 interface RowActions {
-  voice: Uint8Array;
+  patch: V.Patch;
   yoursKey: string;
   connectionId: string;
-  onOpen: (bytes: Uint8Array) => void;
-  onSaveLocal: (bytes: Uint8Array) => void;
+  onOpen: (p: V.Patch) => void;
+  onSaveLocal: (p: V.Patch) => void;
   say: (msg: string) => void;
 }
 
-function Row({ row, voice, yoursKey, connectionId, onOpen, onSaveLocal, say }: RowActions & { row: Shared_row$data }) {
+function Row({ row, patch, yoursKey, connectionId, onOpen, onSaveLocal, say }: RowActions & { row: Shared_row$data }) {
   const [commitUpdate, updating] = useMutation<SharedUpdateMutation>(UpdateMutation);
   const [commitDelete, deleting] = useMutation<SharedDeleteMutation>(DeleteMutation);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<"update" | "delete" | null>(null);
-  const bytes = patchOf(row.data);
+  const bytes = bytesOf(row.data);
+  const saved: V.Patch | null = bytes ? { data: bytes, arpeggio: arpeggioOf(row.arpeggio) } : null;
   const busy = updating || deleting;
 
-  function update(data: Uint8Array, doing: string, done: string) {
-    const name = V.getName(data);
+  function update(p: V.Patch, doing: string, done: string) {
+    const name = V.getName(p.data);
     if (!isNameAllowed(name)) { say(refusedName(name)); return; }
     commitUpdate({
-      variables: { input: { id: row.id, data: toB64(data), creatorKey: yoursKey }, yoursKey },
+      variables: { input: { id: row.id, data: toB64(p.data), arpeggio: arpeggioInput(p.arpeggio), creatorKey: yoursKey }, yoursKey },
       onCompleted: () => { say(done); setRenaming(null); },
       onError: err => say(problem(err, doing)),
     });
@@ -163,7 +171,7 @@ function Row({ row, voice, yoursKey, connectionId, onOpen, onSaveLocal, say }: R
         <time dateTime={row.updatedAt} className={SMALL}>{date(row.updatedAt)}</time>
       </div>
       {renaming !== null ? (
-        <form className="flex flex-wrap gap-1.5" onSubmit={e => { e.preventDefault(); if (bytes) update(V.setName(bytes, renaming), "RENAME", `RENAMED TO ${renaming.trim() || "UNTITLED"}.`); }}>
+        <form className="flex flex-wrap gap-1.5" onSubmit={e => { e.preventDefault(); if (saved) update({ ...saved, data: V.setName(saved.data, renaming) }, "RENAME", `RENAMED TO ${renaming.trim() || "UNTITLED"}.`); }}>
           <input
             aria-label={`NEW NAME FOR ${row.name}`} autoFocus maxLength={NAME_MAX} value={renaming}
             onChange={e => setRenaming(e.target.value)}
@@ -175,8 +183,8 @@ function Row({ row, voice, yoursKey, connectionId, onOpen, onSaveLocal, say }: R
         </form>
       ) : (
         <div className="flex flex-wrap gap-1.5">
-          <Button disabled={!bytes} onClick={() => bytes && onOpen(bytes)}>OPEN</Button>
-          <Button disabled={!bytes} onClick={() => bytes && onSaveLocal(bytes)}>SAVE TO LOCAL</Button>
+          <Button disabled={!saved} onClick={() => saved && onOpen(saved)}>OPEN</Button>
+          <Button disabled={!saved} onClick={() => saved && onSaveLocal(saved)}>SAVE TO LOCAL</Button>
           {row.yours && (
             <>
               <Button disabled={busy || !bytes} onClick={() => setRenaming(row.name)}>RENAME</Button>
@@ -186,7 +194,7 @@ function Row({ row, voice, yoursKey, connectionId, onOpen, onSaveLocal, say }: R
                 onClick={() => {
                   if (confirm !== "update") { setConfirm("update"); return; }
                   setConfirm(null);
-                  update(voice, "UPDATE", `UPDATED WITH THE PATCH YOU'RE EDITING.`);
+                  update(patch, "UPDATE", `UPDATED WITH THE PATCH YOU'RE EDITING.`);
                 }}
               >{confirm === "update" ? "REPLACE WITH CURRENT?" : updating ? "SAVING…" : "UPDATE"}</Button>
               <Button
@@ -254,15 +262,15 @@ class LoadFailed extends Component<{ children: ReactNode; onRetry: () => void },
   }
 }
 
-function Save({ voice, yoursKey, connection, onKey, say }: { voice: Uint8Array; yoursKey: string; connection: () => { id: string | null; search: boolean }; onKey: (k: string) => void; say: (m: string) => void }) {
+function Save({ patch, yoursKey, connection, onKey, say }: { patch: V.Patch; yoursKey: string; connection: () => { id: string | null; search: boolean }; onKey: (k: string) => void; say: (m: string) => void }) {
   const [commit, saving] = useMutation<SharedSaveMutation>(SaveMutation);
   const onSave = () => {
-    const name = V.getName(voice);
+    const name = V.getName(patch.data);
     if (!isNameAllowed(name)) { say(refusedName(name)); return; }
     const key = yoursKey || D.ensureKey();
     if (key !== yoursKey) onKey(key);
     commit({
-      variables: { input: { data: toB64(voice), creatorKey: key }, yoursKey: key },
+      variables: { input: { data: toB64(patch.data), arpeggio: arpeggioInput(patch.arpeggio), creatorKey: key }, yoursKey: key },
       updater: (store: RecordSourceSelectorProxy<SharedSaveMutation$data>) => { const c = connection(); prependSaved(c.id, c.search)(store); },
       onCompleted: res => say(res.dmbkSoundSaveJuno60Voice.created ? `SHARED ${name || "UNTITLED"}.` : `${name || "UNTITLED"} IS ALREADY IN THE SHARED LIST.`),
       onError: err => say(problem(err, "SAVE")),
@@ -311,12 +319,12 @@ function DeviceKey({ yoursKey, onKey }: { yoursKey: string; onKey: (k: string) =
 }
 
 interface Props {
-  voice: Uint8Array;
-  onOpen: (bytes: Uint8Array) => void;
-  onSaveLocal: (bytes: Uint8Array) => void;
+  patch: V.Patch;
+  onOpen: (p: V.Patch) => void;
+  onSaveLocal: (p: V.Patch) => void;
 }
 
-export default function Shared({ voice, onOpen, onSaveLocal }: Props) {
+export default function Shared({ patch, onOpen, onSaveLocal }: Props) {
   const [yoursKey, setYoursKey] = useState("");
   const [mine, setMine] = useState(false);
   const [text, setText] = useState("");
@@ -339,7 +347,7 @@ export default function Shared({ voice, onOpen, onSaveLocal }: Props) {
   return (
     <RelayEnvironmentProvider environment={relayEnvironment()}>
       <div className={ROW + " mt-0"}>
-        <Save voice={voice} yoursKey={yoursKey} connection={() => ({ id: connectionId.current, search: !!search })} onKey={setYoursKey} say={setMsg} />
+        <Save patch={patch} yoursKey={yoursKey} connection={() => ({ id: connectionId.current, search: !!search })} onKey={setYoursKey} say={setMsg} />
       </div>
       {msg && <p role="status" className={NOTE}>{msg}</p>}
       <div className="flex flex-wrap items-center gap-2">
@@ -357,7 +365,7 @@ export default function Shared({ voice, onOpen, onSaveLocal }: Props) {
       </div>
       <LoadFailed key={fetchKey} onRetry={() => setRetries(n => n + 1)}>
         <Suspense fallback={<p className={NOTE}>LOADING…</p>}>
-          <List filters={filters} fetchKey={fetchKey} onConnection={onConnection} voice={voice} onOpen={onOpen} onSaveLocal={onSaveLocal} say={setMsg} />
+          <List filters={filters} fetchKey={fetchKey} onConnection={onConnection} patch={patch} onOpen={onOpen} onSaveLocal={onSaveLocal} say={setMsg} />
         </Suspense>
       </LoadFailed>
       <DeviceKey yoursKey={yoursKey} onKey={k => { setYoursKey(k); setMsg(""); }} />
